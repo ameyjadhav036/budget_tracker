@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quick Budget Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #f0f4f8;
+      --card-bg: #ffffff;
+      --income: #16a34a;
+      --expense: #dc2626;
+      --balance: #2563eb;
+      --radius: 12px;
+      --shadow: 0 6px 14px rgba(0,0,0,0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: var(--bg);
+      color: #1f2937;
+      padding: 20px;
+    }
+
+    h1 {
+      background: linear-gradient(90deg, #2563eb, #16a34a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .app {
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .subtitle {
+      color: #6b7280;
+    }
+
+    .add-transaction {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .add-transaction input, 
+    .add-transaction select, 
+    .add-transaction button {
+      padding: 10px;
+      font-size: 14px;
+      border-radius: var(--radius);
+      border: 1px solid #d1d5db;
+    }
+
+    .add-transaction button {
+      background: linear-gradient(90deg, #2563eb, #16a34a);
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .add-transaction button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .summary {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      flex: 1;
+      padding: 16px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .card h3 {
+      margin-bottom: 6px;
+    }
+
+    .card.income p { color: var(--income); font-weight: bold; }
+    .card.expense p { color: var(--expense); font-weight: bold; }
+    .card.balance p { color: var(--balance); font-weight: bold; }
+
+    .chart-section {
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .transactions {
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .transactions table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .transactions th, 
+    .transactions td {
+      padding: 10px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+    }
+
+    .transactions th {
+      background: #f9fafb;
+    }
+
+    .tag {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: white;
+    }
+
+    .tag.income { background: var(--income); }
+    .tag.expense { background: var(--expense); }
+
+    /* Compact category badges */
+    .category-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: white;
+      font-weight: 500;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .category-badge:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .category-Food { background-color: #f87171; }
+    .category-Transport { background-color: #fb923c; }
+    .category-Entertainment { background-color: #60a5fa; }
+    .category-Shopping { background-color: #a78bfa; }
+    .category-Bills { background-color: #facc15; color: #1f2937; }
+    .category-General { background-color: #6b7280; }
+
+    .remove-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #9ca3af;
+    }
+    .remove-btn:hover {
+      color: #ef4444;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 20px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>💰 Quick Budget Tracker</h1>
+      <p class="subtitle">Track your income, expenses, and spending categories</p>
+    </header>
+
+    <section class="add-transaction">
+      <input type="text" id="desc" placeholder="Description" />
+      <input type="number" id="amount" placeholder="Amount" />
+      <select id="type">
+        <option value="income">Income</option>
+        <option value="expense">Expense</option>
+      </select>
+      <select id="category">
+        <option>Food</option>
+        <option>Transport</option>
+        <option>Entertainment</option>
+        <option>Shopping</option>
+        <option>Bills</option>
+        <option>General</option>
+      </select>
+      <input type="date" id="date" />
+      <button id="add-btn">Add</button>
+    </section>
+
+    <section class="summary">
+      <div class="card income">
+        <h3>Income</h3>
+        <p id="total-income">$0.00</p>
+      </div>
+      <div class="card expense">
+        <h3>Expenses</h3>
+        <p id="total-expense">$0.00</p>
+      </div>
+      <div class="card balance">
+        <h3>Balance</h3>
+        <p id="balance">$0.00</p>
+      </div>
+    </section>
+
+    <section class="chart-section">
+      <h3>Spending Breakdown</h3>
+      <canvas id="categoryChart" style="max-width: 300px; margin: auto;"></canvas>
+    </section>
+
+    <section class="transactions">
+      <h3>Transactions</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Amount</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Date</th>
+            <th>Remove</th>
+          </tr>
+        </thead>
+        <tbody id="tx-table"></tbody>
+      </table>
+    </section>
+
+    <footer>
+      <p>© 2025 Quick Budget Tracker</p>
+    </footer>
+  </div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = "quick-budget-transactions-v3";
+      const $ = (s) => document.querySelector(s);
+
+      const categoryColors = {
+        Food: "#f87171",
+        Transport: "#fb923c",
+        Entertainment: "#60a5fa",
+        Shopping: "#a78bfa",
+        Bills: "#facc15",
+        General: "#6b7280"
+      };
+
+      let transactions = load();
+
+      function load() {
+        try {
+          return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        } catch {
+          return [];
+        }
+      }
+
+      function save() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+      }
+
+      function render() {
+        const income = transactions.filter(t => t.type === "income").reduce((a, t) => a + t.amount, 0);
+        const expense = transactions.filter(t => t.type === "expense").reduce((a, t) => a + t.amount, 0);
+        const balance = income - expense;
+
+        $("#total-income").textContent = `$${income.toFixed(2)}`;
+        $("#total-expense").textContent = `$${expense.toFixed(2)}`;
+        $("#balance").textContent = `$${balance.toFixed(2)}`;
+
+        const tbody = $("#tx-table");
+        tbody.innerHTML = "";
+        transactions.forEach((t, i) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${t.desc}</td>
+            <td>$${t.amount.toFixed(2)}</td>
+            <td><span class="tag ${t.type}">${t.type}</span></td>
+            <td><span class="category-badge category-${t.category}">${t.category}</span></td>
+            <td>${t.date}</td>
+            <td><button class="remove-btn" data-index="${i}">✕</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        renderChart();
+      }
+
+      function renderChart() {
+        const ctx = document.getElementById("categoryChart").getContext("2d");
+        const categories = {};
+        transactions.filter(t => t.type === "expense").forEach(t => {
+          categories[t.category] = (categories[t.category] || 0) + t.amount;
+        });
+
+        if (window.chartInstance) {
+          window.chartInstance.destroy();
+        }
+
+        window.chartInstance = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: Object.keys(categories),
+            datasets: [{
+              data: Object.values(categories),
+              backgroundColor: Object.keys(categories).map(cat => categoryColors[cat] || "#ccc"),
+            }]
+          },
+          options: { responsive: true }
+        });
+      }
+
+      $("#add-btn").addEventListener("click", () => {
+        const desc = $("#desc").value.trim();
+        const amount = parseFloat($("#amount").value);
+        const type = $("#type").value;
+        const category = $("#category").value;
+        const date = $("#date").value || new Date().toISOString().split("T")[0];
+
+        if (!desc || isNaN(amount) || amount <= 0) {
+          alert("Please enter valid description and amount.");
+          return;
+        }
+
+        transactions.push({ desc, amount, type, category, date });
+        save();
+        render();
+
+        $("#desc").value = "";
+        $("#amount").value = "";
+        $("#date").value = "";
+      });
+
+      $("#tx-table").addEventListener("click", (e) => {
+        if (e.target.classList.contains("remove-btn")) {
+          const index = parseInt(e.target.dataset.index, 10);
+          transactions.splice(index, 1);
+          save();
+          render();
+        }
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
